@@ -52,6 +52,19 @@ MergedLloydsDf.to_csv(path_or_buf = ProcLloydsCsvPath)
 dateconv = np.vectorize(datetime.datetime.fromtimestamp)
 df = MergedLloydsDf[~MergedLloydsDf['Transaction Description'].str.contains('R THIBAULT')].sort_values(by = 'Timestamp')
 
+tl = list(set(df[df.duplicated(subset='Timestamp', keep = False)]['Timestamp']))
+new_entries_df = pd.DataFrame(columns = df.columns)
+for t in tl:
+    new_entry_ser = df[df['Timestamp'] == t][['Debit Amount', 'Credit Amount']].sum()
+    new_entry_ser['Timestamp'] = t
+    new_entries_df = new_entries_df.append(new_entry_ser, ignore_index = True)
+    df = df[df['Timestamp'] != t]
+
+df = df.append(new_entries_df)
+df = df.sort_values(by = 'Timestamp')
+
+print(df['Timestamp'].diff())
+
 def GetSavingsDelta(deb, cre):
     return cre - deb
 
@@ -64,7 +77,7 @@ df['Savings n=360'] = df['Savings'].rolling(360).mean()
 # import pdb; pdb.set_trace()
 
 plt.plot_date(dateconv(df['Timestamp']), df['Savings'], 'b.', markersize = 1,)
-plt.plot_date(dateconv(df['Timestamp']), df['Savings n=30'], 'r-')
+plt.plot_date(dateconv(df['Timestamp']), df['Savings n=30'], 'r.')
 plt.plot_date(dateconv(df['Timestamp']), df['Savings n=90'], 'g-')
 plt.plot_date(dateconv(df['Timestamp']), df['Savings n=360'], 'y-')
 plt.gca().xaxis.set_minor_locator(matplotlib.ticker.AutoMinorLocator(12))
